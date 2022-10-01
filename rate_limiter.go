@@ -7,6 +7,7 @@ import (
 // The State value represents an allowed request proceeding result state.
 type State int
 
+//goland:noinspection GoUnusedConst
 const (
 	// StateOk represents the request proceeding result is ok.
 	StateOk State = iota
@@ -35,16 +36,20 @@ func IsErrLimitExceed(err error) bool {
 	return errors.Is(err, errLimitExceed)
 }
 
-// DoneFunc is done function.
-type DoneFunc func(DoneInfo)
-
-// DoneInfo is done info.
-type DoneInfo struct {
-	State State
-	Err   error
+// Token 请求许可凭证
+type Token interface {
+	// Ready 请求可执行信号
+	Ready() <-chan struct{}
+	// Done 请求完成回调
+	Done(state State, err error)
 }
 
 // Limiter is a rate limiter.
 type Limiter interface {
-	Allow() (DoneFunc, error)
+	// Allow checks all inbound traffic.
+	// Once overload is detected, it raises limit.ErrLimitExceed error.
+	//
+	// If the request is permitted, the Token.Done method must be called after
+	// finishing the request, even if the request is failed or timeout.
+	Allow(id string) (Token, error)
 }
